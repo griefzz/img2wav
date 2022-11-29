@@ -159,6 +159,8 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
 
     wav_header_free(header);
 
+    fclose(file);
+
     return n;
 }
 
