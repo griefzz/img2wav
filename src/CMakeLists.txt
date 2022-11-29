@@ -1,0 +1,1 @@
+add_executable(img2wav img2wav.c)
