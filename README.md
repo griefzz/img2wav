@@ -5,7 +5,9 @@ Convert pixel data to a wav file
 ```sh
 ./img2wav 96000.0 2.0 in.jpg out.wav
 ```
-![lena](/images/lena.jpg "lena.jpg normal") ![lena_fft](/images/example.png "lena.jpg in a spectrogram")
+![lena](/images/lena.jpg "lena.jpg normal") 
+
+![lena_fft](/images/example.png "lena.jpg in a spectrogram")
 
 # Building
 ```sh
@@ -78,4 +80,21 @@ def normalize(data):
     m = find_max(data)
     for i in len(data):
         data[i] *= 1 / m
+```
+
+## Displaying the spectrogram
+A simple python script can generate a spectrogram from our audio files
+```py
+import matplotlib.pyplot as plt
+from scipy import signal
+from scipy.io import wavfile
+
+sample_rate, samples = wavfile.read("out.wav")
+frequencies, times, spectrogram = signal.spectrogram(samples, sample_rate)
+
+plt.pcolormesh(times, frequencies, spectrogram)
+plt.imshow(spectrogram)
+plt.ylabel("Frequency [Hz]")
+plt.xlabel("Time [sec]")
+plt.show()
 ```

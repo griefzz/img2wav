@@ -113,8 +113,8 @@ float *get_freqs(const int *pixels, float sample_rate, float time_s, int width, 
             const float A    = map(heat, 0.0f, 255.0f, 0.001f, 1.0f);
             int t            = 0;
             while (t < target) {
-                // we do (height - y) to flip the image upside down
-                const float fc = (height - y) * scale;
+                // do (height - y) * scale to flip the image upside down
+                const float fc = y * scale;
                 rp[t] += A * sin(two_pi * (fc / fs) * t);
                 t++;
             }
@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
     /* Wav files expect amplitudes between [-1.0, 1.0] */
     normalize(freqs, n);
 
-    wav_write_config cfg = {1, n, sample_rate};
+    wav_write_config cfg = {1, n, sample_rate, 24};
     wav_write(cfg, argv[4], freqs);
 
     free(freqs);

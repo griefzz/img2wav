@@ -9,6 +9,13 @@ NOTE: Currently only supports 32-bit wav files
 #include <string.h>
 #include <inttypes.h>
 
+/** Clamp a value between [start, end] */
+int32_t clamp(int32_t v, int32_t start, int32_t end) {
+    if (v < start) v = start;
+    if (v > end) v = end;
+    return v;
+}
+
 /** Header for a wav file */
 struct WavHeader {
     struct RIFF {
@@ -28,12 +35,6 @@ struct WavHeader {
         uint16_t bitsPerSample;
     } WAVE;
 
-    struct FACT {
-        const char *ckID;// fact
-        uint32_t cksize;
-        uint32_t dwSampleLength;
-    } FACT;
-
     struct DATA {
         const char *title;// data
         uint32_t size;
@@ -41,7 +42,6 @@ struct WavHeader {
 
     struct RIFF riff;
     struct WAVE wave;
-    struct FACT fact;
     struct DATA data;
 };
 typedef struct WavHeader WavHeader;
@@ -52,19 +52,20 @@ Create a new WavHeader
 @param nc Number of channels
 @param ns Number of samples
 @param sr Sample rate
+@param bd Bit depth
 */
-WavHeader *wav_header_new(uint16_t nc, uint32_t ns, uint32_t sr) {
+WavHeader *wav_header_new(uint16_t nc, uint32_t ns, uint32_t sr, uint16_t bd) {
     WavHeader *header = malloc(sizeof(*header));
     if (!header) {
         fprintf(stderr, "Failed to allocate: %zu bytes in wav_header_new()!", sizeof(*header));
         return NULL;
     }
 
-    uint16_t M = header->wave.bitsPerSample / 8;
+    uint16_t M = bd / 8;
 
     // RIFF
     header->riff.title    = "RIFF";
-    header->riff.fileSize = 4 + 48 + 12 + (8 + M * nc * ns);
+    header->riff.fileSize = 28 + 8 + (M * nc * ns);
     // if our filesize is odd we padd it with one byte
     if (header->riff.fileSize % 2 != 0) header->riff.fileSize++;
 
@@ -72,17 +73,12 @@ WavHeader *wav_header_new(uint16_t nc, uint32_t ns, uint32_t sr) {
     header->wave.title                  = "WAVE";
     header->wave.marker                 = "fmt\x20";
     header->wave.cksize                 = 16;
-    header->wave.WAVE_FORMAT_EXTENSIBLE = 3;
+    header->wave.WAVE_FORMAT_EXTENSIBLE = (bd == 32) ? 3 : 1;
     header->wave.numChannels            = nc;
     header->wave.sampleRate             = sr;
-    header->wave.bitsPerSample          = 32;
-    header->wave.nAvgBytesPecSec        = (sr * header->wave.bitsPerSample * nc) / 8;
+    header->wave.nAvgBytesPecSec        = (sr * bd * nc) / 8;
     header->wave.nBlockAlign            = M * nc;
-
-    // FACT
-    header->fact.ckID           = "fact";
-    header->fact.cksize         = 4;
-    header->fact.dwSampleLength = nc * ns;
+    header->wave.bitsPerSample          = bd;
 
     // DATA
     header->data.title = "data";
@@ -104,6 +100,7 @@ struct wav_write_config {
     uint16_t nc;// number of channels
     uint32_t ns;// number of samples
     uint32_t sr;// sample rate
+    uint16_t bd;// bit depth
 };
 typedef struct wav_write_config wav_write_config;
 
@@ -116,6 +113,11 @@ Write audio data to a wav file
 @return Number of bytes written including header
 */
 int wav_write(wav_write_config cfg, const char *path, const float *data) {
+    if (cfg.bd != 32 && cfg.bd != 24 && cfg.bd != 16) {
+        fprintf(stderr, "Invalid bit depth: %d! Must be either 32, 24 or 16!", cfg.bd);
+        return 0;
+    }
+
     int n     = 0;
     char padd = 0;
 
@@ -125,7 +127,7 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
         return n;
     }
 
-    WavHeader *header = wav_header_new(cfg.nc, cfg.ns, cfg.sr);
+    WavHeader *header = wav_header_new(cfg.nc, cfg.ns, cfg.sr, cfg.bd);
 
     // RIFF
     n += fwrite(header->riff.title, sizeof(header->riff.title[0]), strlen(header->riff.title), file);
@@ -142,17 +144,29 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
     n += fwrite(&header->wave.nBlockAlign, sizeof(header->wave.nBlockAlign), 1, file);
     n += fwrite(&header->wave.bitsPerSample, sizeof(header->wave.bitsPerSample), 1, file);
 
-    // FACT
-    n += fwrite(header->fact.ckID, sizeof(header->fact.ckID[0]), strlen(header->fact.ckID), file);
-    n += fwrite(&header->fact.cksize, sizeof(header->fact.cksize), 1, file);
-    n += fwrite(&header->fact.dwSampleLength, sizeof(header->fact.dwSampleLength), 1, file);
-
     // DATA
     n += fwrite(header->data.title, sizeof(header->data.title[0]), strlen(header->data.title), file);
     n += fwrite(&header->data.size, sizeof(header->data.size), 1, file);
 
     // append our actual audio data
-    fwrite(data, sizeof(*data), cfg.ns, file);
+    switch (cfg.bd) {
+        case 32:
+            fwrite(data, sizeof(*data), cfg.ns, file);
+            break;
+        case 24:
+            for (size_t i = 0; i < cfg.ns; i++) {
+                int32_t v = lround(data[i] * 0x7FFFFF) & 0xFFFFFF;
+                fwrite(&v, 24 / 8, 1, file);
+            }
+            break;
+        case 16:
+            for (size_t i = 0; i < cfg.ns; i++) {
+                int32_t v = (int32_t) (data[i] * 32768.0f);
+                v         = clamp(v, -32768, 32767);
+                fwrite(&v, sizeof(int16_t), 1, file);
+            }
+            break;
+    }
 
     // padd if needed
     if (header->data.size % 2 != 0) fwrite(&padd, sizeof(padd), 1, file);
