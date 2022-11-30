@@ -77,9 +77,8 @@ for x in width:
 Audio data is meant to be within the range of [-1, 1] and our process of summing frequencies may put us out of this range. A quick and dirty way of normalizing the input is to find the absolute maximum value in our audio data then divide the entire audio buffer by its inverse.
 ```py
 def normalize(data):
-    m = find_max(data)
-    for i in len(data):
-        data[i] *= 1 / m
+    m = np.max(data)
+    return data * 1 / m
 ```
 
 ## Displaying the spectrogram
