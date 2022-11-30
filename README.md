@@ -39,7 +39,7 @@ We can generate multiple frequencies in the spectrogram easily:
 
 $f(t) = \sum A * sin(2\pi\frac{f_{c}}{f_{s}}t)$
 
-so to generate a 440Hz, 1200hz and 765hz wave at 96000hz:
+So to generate a 440Hz, 1200hz and 765hz wave at 96000hz:
 
 $f(t) = sin(2\pi\frac{440}{96000}t) + sin(2\pi\frac{1200}{96000}t) + sin(2\pi\frac{765}{96000}t)$
 
@@ -68,6 +68,7 @@ for x in width:
         while (t < target):
             freq = (height - y) * scale
             output += heat * sin(2 * pi * freq * t)
+            t += 1
 ```
 
 ## Normalization
