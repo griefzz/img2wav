@@ -26,9 +26,11 @@ For instance an A440 note at 96000hz is:
 $f(t) = sin(2\pi\frac{440}{96000}t)$
 
 This generates the amplitude over time graph:
+
 ![time_amp_graph](images/amp_time_graph.png)
 
 And the corresponding spectrogram (frequency over time)
+
 ![time_freq_graph](images/freq_time_graph.png)
 
 Notice how we have just one frequency existing at 440Hz.
