@@ -1,7 +1,3 @@
-/* 
-Basic header for writing audio data to wav files
-NOTE: Currently only supports 32-bit wav files
-*/
 #ifndef WAV_H
 #define WAV_H
 #include <stdlib.h>
