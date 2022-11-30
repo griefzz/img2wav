@@ -68,7 +68,7 @@ for x in width:
         heat = map(pixels[y][x], 0, 255, 0.01, 0.1) # [0, 255] -> [0.01, 0.1]
         t = 0
         while (t < target):
-            freq = (height - y) * scale
+            freq = y * scale # or (height - y) * scale to flip the image upside down
             output += heat * sin(2 * pi * freq * t)
             t += 1
 ```
