@@ -78,7 +78,7 @@ Audio data is meant to be within the range of [-1, 1] and our process of summing
 ```py
 def normalize(data):
     m = np.max(data)
-    return data * 1 / m
+    return data * (1 / m)
 ```
 
 ## Displaying the spectrogram
