@@ -69,7 +69,7 @@ for x in width:
         t = 0
         while (t < target):
             freq = y * scale # or (height - y) * scale to flip the image upside down
-            output += heat * sin(2 * pi * freq * t)
+            output += heat * sin(2 * pi * (freq / sample_rate) * t)
             t += 1
 ```
 
