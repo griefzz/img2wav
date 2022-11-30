@@ -45,14 +45,14 @@ $f(t) = sin(2\pi\frac{440}{96000}t) + sin(2\pi\frac{1200}{96000}t) + sin(2\pi\fr
 
 ## Preparing the image
 Now that we know how to generate frequencies, we need to determine which frequencies to draw and how much of each should exist. To do this we create a heatmap by gray scaling an image and mapping the [0, 255] color value to an amplitude (A) in [0.01, 0.1].
-Images usually contain 3 color values per pixel. In order to generate a heat map for our image well convert these 3 color values to a single color using the gray scale  [Luma](https://en.wikipedia.org/wiki/Luma_%28video%29#Rec._601_luma_versus_Rec._709_luma_coefficients) algorithm.
+Images usually contain 3 color values per pixel. In order to generate a heat map for our image we'll convert these 3 color values to a single color using the gray scale  [Luma](https://en.wikipedia.org/wiki/Luma_%28video%29#Rec._601_luma_versus_Rec._709_luma_coefficients) algorithm.
 ```
 pixels[y][x] = r * 0.299 + g * 0.587 + b * 0.114;
 ```
 ![lena](images/lena.jpg) ![lena_gray](images/lena_gray.jpg)
 
 ## Transmission length
-Once we have our pixel data prepared we need to determine how large the image shold be.
+Once we have our pixel data prepared we need to determine how large the image should be.
 
 The height of our image is going to be constrained within the frequencies displayed in our spectrogram. And the width will be evenly spread out over however many seconds we want to transmit the data for. Here's some code to explain this.
 
