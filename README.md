@@ -63,8 +63,8 @@ time_s = 2                              # length of image in seconds
 max_height = 96000                      # spectrogram height in hz
 scale = max_height / height             # linearly scale our frequencies
 target = (sample_rate * time_s) / width # width in time for each pixel
-for x in width:
-    for y in height:
+for x in range(0, width):
+    for y in range(0, height):
         heat = map(pixels[y][x], 0, 255, 0.01, 0.1) # [0, 255] -> [0.01, 0.1]
         t = 0
         while (t < target):
