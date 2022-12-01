@@ -13,6 +13,9 @@
         }                                                                       \
     } while (0);
 
+#define write_key(key, file) fwrite((key), sizeof(*(key)), strlen((key)), (file))
+#define write_val(val, file) fwrite(&(val), sizeof((val)), 1, (file))
+
 /** Clamp a value between [start, end] */
 inline int32_t clamp(int32_t v, int32_t start, int32_t end) {
     if (v < start) v = start;
@@ -130,23 +133,23 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
     check_error(!header, "Unable to allocate WavHeader", n);
 
     // RIFF
-    n += fwrite(header->riff.title, sizeof(header->riff.title[0]), strlen(header->riff.title), file);
-    n += fwrite(&header->riff.fileSize, sizeof(header->riff.fileSize), 1, file);
+    n += write_key(header->riff.title, file);
+    n += write_val(header->riff.fileSize, file);
 
     // WAVE
-    n += fwrite(header->wave.title, sizeof(header->wave.title[0]), strlen(header->wave.title), file);
-    n += fwrite(header->wave.marker, sizeof(header->wave.marker[0]), strlen(header->wave.marker), file);
-    n += fwrite(&header->wave.cksize, sizeof(header->wave.cksize), 1, file);
-    n += fwrite(&header->wave.WAVE_FORMAT_EXTENSIBLE, sizeof(header->wave.WAVE_FORMAT_EXTENSIBLE), 1, file);
-    n += fwrite(&header->wave.numChannels, sizeof(header->wave.numChannels), 1, file);
-    n += fwrite(&header->wave.sampleRate, sizeof(header->wave.sampleRate), 1, file);
-    n += fwrite(&header->wave.nAvgBytesPecSec, sizeof(header->wave.nAvgBytesPecSec), 1, file);
-    n += fwrite(&header->wave.nBlockAlign, sizeof(header->wave.nBlockAlign), 1, file);
-    n += fwrite(&header->wave.bitsPerSample, sizeof(header->wave.bitsPerSample), 1, file);
+    n += write_key(header->wave.title, file);
+    n += write_key(header->wave.marker, file);
+    n += write_val(header->wave.cksize, file);
+    n += write_val(header->wave.WAVE_FORMAT_EXTENSIBLE, file);
+    n += write_val(header->wave.numChannels, file);
+    n += write_val(header->wave.sampleRate, file);
+    n += write_val(header->wave.nAvgBytesPecSec, file);
+    n += write_val(header->wave.nBlockAlign, file);
+    n += write_val(header->wave.bitsPerSample, file);
 
     // DATA
-    n += fwrite(header->data.title, sizeof(header->data.title[0]), strlen(header->data.title), file);
-    n += fwrite(&header->data.size, sizeof(header->data.size), 1, file);
+    n += write_key(header->data.title, file);
+    n += write_val(header->data.size, file);
 
     // append our actual audio data
     switch (cfg.bd) {
@@ -156,7 +159,7 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
         case 24:
             for (size_t i = 0; i < cfg.ns; i++) {
                 int32_t v = lround(data[i] * 0x7FFFFF) & 0xFFFFFF;
-                fwrite(&v, 24 / 8, 1, file);
+                fwrite(&v, 24 / 8 /* 3 bytes */, 1, file);
             }
             break;
         case 16:
@@ -169,7 +172,7 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
     }
 
     // padd if needed
-    if (header->data.size % 2 != 0) fwrite(&padd, sizeof(padd), 1, file);
+    if (header->data.size % 2 != 0) write_val(padd, file);
 
     wav_header_free(header);
 
@@ -179,4 +182,6 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
 }
 
 #undef check_error
+#undef write_key
+#undef write_val
 #endif
