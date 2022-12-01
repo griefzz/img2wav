@@ -117,8 +117,7 @@ Write audio data to a wav file
 @return Number of bytes written including header
 */
 int wav_write(wav_write_config cfg, const char *path, const float *data) {
-    int n     = 0;
-    char padd = 0;
+    int n = 0;
 
     check_error(!data, "Data pointer must not be NULL.", n);
     check_error(cfg.nc == 0, "Number of channels must be greater than 0.", n);
@@ -171,8 +170,9 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
             break;
     }
 
-    // padd if needed
-    if (header->data.size % 2 != 0) write_val(padd, file);
+    // pad an extra byte if needed
+    char padding = 0;
+    if (header->data.size % 2 != 0) write_val(padding, file);
 
     wav_header_free(header);
 
