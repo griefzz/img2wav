@@ -52,11 +52,11 @@ Convert an image into a Width x Height sized array of greyscale values between [
 int *get_pixels(const char *path, int *x, int *y) {
     int n;
     unsigned char *data = stbi_load(path, x, y, &n, 3);
-    check_error(!data, "Failed to open file", NULL);
-    check_error(n != 3, "Image stride must be 3 (RGB)", NULL);
+    check_error(!data, "stbi_load(): Failed to open file", NULL);
+    check_error(n != 3, "stbi_load(): Image stride must be 3 (RGB)", NULL);
 
     int *pixels = malloc(*x * *y * sizeof(*pixels));
-    check_error(!pixels, "Failed to allocate pixels", NULL);
+    check_error(!pixels, "malloc(): Failed to allocate pixels", NULL);
 
     for (int i = 0; i < *y; i++) {
         int col = 0;
@@ -96,7 +96,7 @@ float *get_freqs(const int *pixels, float sample_rate, float time_s, int width, 
     *size                = time_s * fs;
 
     float *result = calloc(*size, sizeof(*result));
-    check_error(!result, "Failed to allocate result", NULL);
+    check_error(!result, "calloc(): Failed to allocate result", NULL);
 
     float *rp = result;
     for (int x = 0; x < width; x++) {
@@ -135,11 +135,11 @@ int main(int argc, char **argv) {
 
     int x, y;
     int *pixels = get_pixels(argv[3], &x, &y);
-    if (!pixels) return EXIT_FAILURE;
+    check_error(!pixels, "get_pixels()", EXIT_FAILURE);
 
     int n;
     float *freqs = get_freqs(pixels, sample_rate, time_s, x, y, &n);
-    if (!freqs) return EXIT_FAILURE;
+    check_error(!freqs, "get_freqs()", EXIT_FAILURE);
 
     /* Wav files expect amplitudes between [-1.0, 1.0] */
     normalize(freqs, n);
