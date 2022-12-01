@@ -35,10 +35,10 @@ float find_max(float *src, size_t n) {
 
 /** Normalize values in array to be [-1.0, 1.0] */
 void normalize(float *src, size_t n) {
-    float max  = find_max(src, n);
-    float norm = 1.0f / max;
-    for (size_t i = 0; i < n; i++)
-        src[i] *= norm;
+    float max = find_max(src, n);
+    if (max > 1.0)
+        for (size_t i = 0; i < n; i++)
+            src[i] /= max;
 }
 
 /**
