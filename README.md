@@ -5,8 +5,6 @@ Convert pixel data to a wav file
 ```sh
 ./img2wav 96000.0 2.0 in.jpg out.wav
 ```
-![lena](/images/lena.jpg "lena.jpg normal") 
-
 ![lena_fft](/images/example.png "lena.jpg in a spectrogram")
 
 # Building
