@@ -153,19 +153,19 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
     // append our actual audio data
     switch (cfg.bd) {
         case 32:
-            fwrite(data, sizeof(*data), cfg.ns, file);
+            n += fwrite(data, sizeof(*data), cfg.ns, file);
             break;
         case 24:
             for (size_t i = 0; i < cfg.ns; i++) {
                 int32_t v = lround(data[i] * 0x7FFFFF) & 0xFFFFFF;
-                fwrite(&v, 24 / 8 /* 3 bytes */, 1, file);
+                n += fwrite(&v, 24 / 8 /* 3 bytes */, 1, file);
             }
             break;
         case 16:
             for (size_t i = 0; i < cfg.ns; i++) {
                 int32_t v = (int32_t) (data[i] * 32768.0f);
                 v         = clamp(v, -32768, 32767);
-                fwrite(&v, sizeof(int16_t), 1, file);
+                n += fwrite(&v, sizeof(int16_t), 1, file);
             }
             break;
     }
