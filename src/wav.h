@@ -157,7 +157,7 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
             break;
         case 24:
             for (size_t i = 0; i < cfg.ns; i++) {
-                int32_t v = lround(data[i] * 0x7FFFFF) & 0xFFFFFF;
+                const int32_t v = lround(data[i] * 0x7FFFFF) & 0xFFFFFF;
                 n += fwrite(&v, 24 / 8 /* 3 bytes */, 1, file);
             }
             break;

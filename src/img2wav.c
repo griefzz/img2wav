@@ -10,6 +10,14 @@
 
 #include "wav.h"
 
+#define check_error(error, description, retval)                                 \
+    do {                                                                        \
+        if ((error)) {                                                          \
+            fprintf(stderr, "%s [%s:%d]\n", (description), __FILE__, __LINE__); \
+            return (retval);                                                    \
+        }                                                                       \
+    } while (0);
+
 /** Remaps a value from a source range to a target range. */
 float map(float src, float src_min, float src_max, float target_min, float target_max) {
     return target_min + ((target_max - target_min) * (src - src_min)) / (src_max - src_min);
@@ -43,23 +51,12 @@ Convert an image into a Width x Height sized array of greyscale values between [
 */
 int *get_pixels(const char *path, int *x, int *y) {
     int n;
-    int comp            = 3;
-    unsigned char *data = stbi_load(path, x, y, &n, comp);
-    if (!data) {
-        fprintf(stderr, "Failed to open file: %s!\n", path);
-        return NULL;
-    }
-
-    if (n != comp) {
-        fprintf(stderr, "Image stride must be 3 (RGB) got %d!\n", n);
-        return NULL;
-    }
+    unsigned char *data = stbi_load(path, x, y, &n, 3);
+    check_error(!data, "Failed to open file", NULL);
+    check_error(n != 3, "Image stride must be 3 (RGB)", NULL);
 
     int *pixels = malloc(*x * *y * sizeof(*pixels));
-    if (!pixels) {
-        fprintf(stderr, "Failed to allocate: %zu bytes in get_pixels()!\n", *x * *y * sizeof(*pixels));
-        return NULL;
-    }
+    check_error(!pixels, "Failed to allocate pixels", NULL);
 
     for (int i = 0; i < *y; i++) {
         int col = 0;
@@ -68,7 +65,7 @@ int *get_pixels(const char *path, int *x, int *y) {
             const int g = data[i * (*x * n) + j + 1];
             const int b = data[i * (*x * n) + j + 2];
 
-            // convert the image to gray scale using BT.601
+            // convert the image to gray scale using Luma BT.601
             pixels[i * *x + col] = (r * 0.299 + g * 0.587 + b * 0.114);
             col++;
         }
@@ -99,10 +96,7 @@ float *get_freqs(const int *pixels, float sample_rate, float time_s, int width, 
     *size                = time_s * fs;
 
     float *result = calloc(*size, sizeof(*result));
-    if (!result) {
-        fprintf(stderr, "Failed to allocate: %d bytes in img2freq()!\n", *size);
-        return NULL;
-    }
+    check_error(!result, "Failed to allocate result", NULL);
 
     float *rp = result;
     for (int x = 0; x < width; x++) {
@@ -134,18 +128,10 @@ int main(int argc, char **argv) {
     }
 
     const float sample_rate = atof(argv[1]);
-    if (sample_rate == 0.0) {
-        printf("Invalid sample rate: %f!", sample_rate);
-
-        return EXIT_FAILURE;
-    }
+    check_error(sample_rate == 0.0, "Sample rate must be greater than 0", EXIT_FAILURE);
 
     const float time_s = atof(argv[2]);
-    if (time_s == 0.0) {
-        printf("Invalid transmission time: %f!", time_s);
-
-        return EXIT_FAILURE;
-    }
+    check_error(time_s == 0.0, "Transmission time must be greater than 0", EXIT_FAILURE);
 
     int x, y;
     int *pixels = get_pixels(argv[3], &x, &y);
