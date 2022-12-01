@@ -63,7 +63,7 @@ Create a new WavHeader
 */
 WavHeader *wav_header_new(uint16_t nc, uint32_t ns, uint32_t sr, uint16_t bd) {
     WavHeader *header = malloc(sizeof(*header));
-    if (!header) return NULL;
+    check_error(!header, "malloc(): Failed to allocate WavHeader", NULL);
 
     uint16_t M = bd / 8;
 
@@ -126,10 +126,10 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
     check_error(cfg.bd != 32 && cfg.bd != 24 && cfg.bd != 16, "Bit depth must be either 32, 24 or 16.", n);
 
     FILE *file = fopen(path, "wb");
-    check_error(!file, "Failed to open file for writing", n);
+    check_error(!file, "fopen(): Failed to open file for writing", n);
 
     WavHeader *header = wav_header_new(cfg.nc, cfg.ns, cfg.sr, cfg.bd);
-    check_error(!header, "Unable to allocate WavHeader", n);
+    check_error(!header, "wav_header_new(): Failed to allocate WavHeader", n);
 
     // RIFF
     n += write_key(header->riff.title, file);
