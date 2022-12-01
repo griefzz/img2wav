@@ -5,8 +5,16 @@
 #include <string.h>
 #include <inttypes.h>
 
+#define check_error(error, description, retval)                                 \
+    do {                                                                        \
+        if ((error)) {                                                          \
+            fprintf(stderr, "%s [%s:%d]\n", (description), __FILE__, __LINE__); \
+            return (retval);                                                    \
+        }                                                                       \
+    } while (0);
+
 /** Clamp a value between [start, end] */
-int32_t clamp(int32_t v, int32_t start, int32_t end) {
+inline int32_t clamp(int32_t v, int32_t start, int32_t end) {
     if (v < start) v = start;
     if (v > end) v = end;
     return v;
@@ -52,10 +60,7 @@ Create a new WavHeader
 */
 WavHeader *wav_header_new(uint16_t nc, uint32_t ns, uint32_t sr, uint16_t bd) {
     WavHeader *header = malloc(sizeof(*header));
-    if (!header) {
-        fprintf(stderr, "Failed to allocate: %zu bytes in wav_header_new()!", sizeof(*header));
-        return NULL;
-    }
+    if (!header) return NULL;
 
     uint16_t M = bd / 8;
 
@@ -109,21 +114,20 @@ Write audio data to a wav file
 @return Number of bytes written including header
 */
 int wav_write(wav_write_config cfg, const char *path, const float *data) {
-    if (cfg.bd != 32 && cfg.bd != 24 && cfg.bd != 16) {
-        fprintf(stderr, "Invalid bit depth: %d! Must be either 32, 24 or 16!", cfg.bd);
-        return 0;
-    }
-
     int n     = 0;
     char padd = 0;
 
+    check_error(!data, "Data pointer must not be NULL.", n);
+    check_error(cfg.nc == 0, "Number of channels must be greater than 0.", n);
+    check_error(cfg.ns == 0, "Number of samples must be greater than 0.", n);
+    check_error(cfg.sr == 0, "Sample rate must be greater than 0.", n);
+    check_error(cfg.bd != 32 && cfg.bd != 24 && cfg.bd != 16, "Bit depth must be either 32, 24 or 16.", n);
+
     FILE *file = fopen(path, "wb");
-    if (!file) {
-        perror("failed to open file");
-        return n;
-    }
+    check_error(!file, "Failed to open file for writing", n);
 
     WavHeader *header = wav_header_new(cfg.nc, cfg.ns, cfg.sr, cfg.bd);
+    check_error(!header, "Unable to allocate WavHeader", n);
 
     // RIFF
     n += fwrite(header->riff.title, sizeof(header->riff.title[0]), strlen(header->riff.title), file);
@@ -174,4 +178,5 @@ int wav_write(wav_write_config cfg, const char *path, const float *data) {
     return n;
 }
 
+#undef check_error
 #endif

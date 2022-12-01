@@ -153,7 +153,6 @@ int main(int argc, char **argv) {
 
     int n;
     float *freqs = get_freqs(pixels, sample_rate, time_s, x, y, &n);
-    free(pixels);
     if (!freqs) return EXIT_FAILURE;
 
     /* Wav files expect amplitudes between [-1.0, 1.0] */
@@ -162,6 +161,7 @@ int main(int argc, char **argv) {
     wav_write_config cfg = {1, n, sample_rate, 24};
     wav_write(cfg, argv[4], freqs);
 
+    free(pixels);
     free(freqs);
 
     return EXIT_SUCCESS;
