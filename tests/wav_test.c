@@ -1,13 +1,10 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <limits.h>
+#include <float.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include "../src/wav.h"
-
-#include <float.h>
-#include <math.h>
-#include <stdio.h>
 
 int compare(float *const *a, float *const *b, size_t nc, size_t ns, size_t bd) {
     float epsilon = FLT_EPSILON;
