@@ -219,8 +219,8 @@ int wav_get_header(wav_config *cfg, const char *path) {
     check_error(!path, "Path pointer must not be NULL.", n);
 
     FILE *file = fopen(path, "rb");
-    check_error(!file, "fopen(): Failed to open file for reading.", n);
     fprintf(stderr, "File: %s", path);
+    check_error(!file, "fopen(): Failed to open file for reading.", n);
 
     // RIFF
     n += read_key(title, file);
