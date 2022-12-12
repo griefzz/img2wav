@@ -51,19 +51,19 @@ int main() {
 
     // Stereo test
     wav_config stereo_hdr = {2, ns, sr, bd};
-    assert(wav_write(stereo_hdr, "stereo.wav", c) == ns * 2);
+    assert(wav_write(stereo_hdr, "stereo.wav", c) == ns);
 
     // Multi-channel test
     wav_config multi_hdr = {nc, ns, sr, bd};
-    assert(wav_write(multi_hdr, "multi.wav", c) == ns * 3);
+    assert(wav_write(multi_hdr, "multi.wav", c) == ns);
 
     // 24-bit test
     wav_config multi_24_hdr = {nc, ns, sr, 24};
-    assert(wav_write(multi_24_hdr, "multi_24.wav", c) == ns * 3);
+    assert(wav_write(multi_24_hdr, "multi_24.wav", c) == ns);
 
     // 16-bit test
     wav_config multi_16_hdr = {nc, ns, sr, 16};
-    assert(wav_write(multi_16_hdr, "multi_16.wav", c) == ns * 3);
+    assert(wav_write(multi_16_hdr, "multi_16.wav", c) == ns);
 
     //// Test invalid headers
     // Invalid number of channels test

@@ -1,3 +1,50 @@
+/* wav.h - public domain wav file reader and writer by Spencer Stone (2022)
+   
+   Features:
+       + Supports 32-bit signed 24-bit PCM and signed 16-bit PCM bit depths
+       + Supports multi-channel formats
+       + Cross platform win32/unix/linux
+    
+    Limitations:
+       + Only supports Little-Endian systems
+       + Forced usage of standard library
+       + Limited support for wav header extensions
+
+    DOCUMENTATION
+    =============
+    // When you want to write to a wav file to you need specify 
+    // how its written using a wav_config.
+    wav_config cfg;
+    cfg.nc = num_channels; // >0
+    cfg.ns = num_samples;  // >0
+    cfg.sr = sample_rate;  // 44100, 48000, 96000 etc
+    cfg.bd = bit_depth;    // 16, 24, 32
+
+    // To actually write your audio data, call wav_write() using 
+    // your created wav_config. The data parameter to wav write
+    // is your deinterleaved channel data of size data[num_channels][num_samples];
+    wav_write(cfg, "audio.wav", data);
+
+    // When you want to read from a wav file, you need to populate
+    // the parameters of a wav_config
+    wav_get_header(&cfg, "audio.wav");
+
+    // Since wav.h doesn't automatically allocate any memory, you'll
+    // need to create an input array for your data of size in[num_channels][num_samples];
+    float **in = malloc(sizeof(*in) * cfg.nc);
+    for (size_t ch = 0; ch < cfg.nc; ch++)
+        in[ch] = malloc(sizeof(*in[ch]) * cfg.ns);
+
+    // After we understand the structure of the wav file, we can begin reading
+    // the channel data using wav_read()
+    wav_read(cfg, "audio.wav", in);
+
+    // Don't forget to deallocate the in buffer when you're done
+    for (size_t ch = 0; ch < cfg.nc; ch++)
+        free(in[ch]);
+    free(in);
+
+*/
 #ifndef WAV_H
 #define WAV_H
 #ifdef _WIN32
@@ -122,7 +169,7 @@ typedef struct wav_config wav_config;
  * @param cfg Configuration for the wav writer
  * @param path Destination path for the output file
  * @param data Deinterleaved multi-channel Audio data to write to our wav file
- * @return Number of bytes written not including header
+ * @return Number of samples written
  */
 int wav_write(wav_config cfg, const char *path, float *const *data) {
     int n = 0;
@@ -200,7 +247,7 @@ int wav_write(wav_config cfg, const char *path, float *const *data) {
 
     fclose(file);
 
-    return n;
+    return n / cfg.nc;
 }
 
 /**
