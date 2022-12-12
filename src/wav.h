@@ -294,8 +294,9 @@ int wav_read(wav_config cfg, const char *path, float **data) {
                 for (size_t ch = 0; ch < cfg.nc; ch++) {
                     int32_t v;
                     n += fread(&v, 24 / 8 /* 3 bytes */, 1, file);
-                    unsigned char *c = (unsigned char *) &v;
-                    data[ch][i]      = (c[2] << 24 | c[1] << 16 | c[0] << 8) / (float) (INT_MAX - 256);
+                    long l1 = 0;
+                    memcpy(((unsigned char *) &l1) + 1, &v, 3);
+                    data[ch][i] = (float) l1 / 2147483648.f;
                 }
             }
             break;
