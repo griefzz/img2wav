@@ -13,8 +13,8 @@ int compare(float *const *a, float *const *b, size_t nc, size_t ns, size_t bd) {
 
     for (size_t ch = 0; ch < nc; ch++) {
         for (size_t i = 0; i < ns; i++) {
-            float x = a[ch][i];
-            float y = b[ch][i];
+            const float x = a[ch][i];
+            const float y = b[ch][i];
             if (!(fabs(x - y) <= epsilon)) {
                 return 0;
             }
