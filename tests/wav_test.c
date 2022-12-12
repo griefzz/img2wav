@@ -131,18 +131,6 @@ int main() {
     assert(wav_read(read_hdr, "multi_16.wav", b) == ns);
     assert(compare(c, b, read_hdr.nc, read_hdr.ns, read_hdr.bd));
 
-    //// Test easy-mode
-    // Test reading file
-    wav_config easy_hdr;
-    float **easy_data = wav_read_easy(&easy_hdr, "multi.wav");
-    assert(easy_data);
-    for (size_t ch = 0; ch < easy_hdr.nc; ch++) {
-        assert(easy_data[ch]);
-    }
-
-    // Test freeing allocated data
-    wav_free(easy_hdr, easy_data);
-
     // Cleanup
     for (size_t ch = 0; ch < nc; ch++) {
         free(c[ch]);

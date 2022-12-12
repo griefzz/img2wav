@@ -206,6 +206,7 @@ int wav_write(wav_config cfg, const char *path, float *const *data) {
 /**
  * @brief Read a wav file configuration
  * 
+ * @see wav_read()
  * @param cfg Pointer to store wav file configuration
  * @param path Path to the wav file to read
  * @return int Number of data entries read;
@@ -219,7 +220,6 @@ int wav_get_header(wav_config *cfg, const char *path) {
     check_error(!path, "Path pointer must not be NULL.", n);
 
     FILE *file = fopen(path, "rb");
-    fprintf(stderr, "File: %s", path);
     check_error(!file, "fopen(): Failed to open file for reading.", n);
 
     // RIFF
@@ -260,6 +260,7 @@ int wav_get_header(wav_config *cfg, const char *path) {
 /**
  * @brief Read audio data from a wav file
  * 
+ * @see wav_get_header()
  * @param cfg Configuration for the wav reader
  * @param path Path for the input file
  * @param data Array of channels to write data to
@@ -313,77 +314,6 @@ int wav_read(wav_config cfg, const char *path, float **data) {
     }
 
     return n / cfg.nc;
-}
-
-/**
- * @brief Read audio data from a wav file (easy)
- * 
- * @code
- * wav_config cfg;
- * float **data = wav_read_easy(&cfg, "audio.wav");
- * 
- * for (size_t ch = 0; ch < cfg.nc; ch++) {
- *     for (size_t i = 0; i < cfg.ns; i++) {
- *         // do things with data[ch][i]; 
- *     }
- * }
- * 
- * wav_free(data);
- * @endcode
- * 
- * @see wav_free()
- * @param cfg Pointer to store the read wav config
- * @param path Path to the wav file to read
- * @return float** Heap allocated channel data
- */
-float **wav_read_easy(wav_config *cfg, const char *path) {
-    check_error(wav_get_header(cfg, path) != WAV_HEADER_SIZE, "Invalid wav header.", NULL);
-    check_error(cfg->nc == 0, "Number of channels must be greater than 0.", NULL);
-    check_error(cfg->ns == 0, "Number of samples must be greater than 0.", NULL);
-    check_error(cfg->sr == 0, "Sample rate must be greater than 0.", NULL);
-
-    float **data = malloc(sizeof(*data) * cfg->nc);
-    check_error(!data, "Failed to allocate audio data", NULL);
-    for (size_t ch = 0; ch < cfg->nc; ch++) {
-        data[ch] = malloc(sizeof(*data[ch]) * cfg->ns);
-        if (!data[ch]) {
-            fprintf(stderr, "Failed to allocate channel data [%s:%d]\n", __FILE__, __LINE__);
-
-            // cleanup already allocated space
-            for (size_t i = 0; i < ch; i++)
-                free(data[i]);
-
-            free(data);
-
-            return NULL;
-        }
-    }
-
-    int got = wav_read(*cfg, path, data);
-    check_error(got != cfg->ns, "Failed to read all sample data", NULL);
-
-    return data;
-}
-
-/**
- * @brief Free data allocated with wav_read_easy
- * 
- * @see wav_read_easy()
- * @param cfg wav_config returned from wav_read_easy
- * @param data Data to free
- */
-void wav_free(wav_config cfg, float **data) {
-    for (size_t ch = 0; ch < cfg.nc; ch++) {
-        if (data[ch])
-            free(data[ch]);
-        else
-            fprintf(stderr, "Attempted to free NULL channel pointer [%s:%d]\n", __FILE__, __LINE__);
-    }
-
-    if (data)
-        free(data);
-    else
-        fprintf(stderr, "Attempted to free NULL data pointer [%s:%d]\n", __FILE__, __LINE__);
 }
 
 #undef check_error
