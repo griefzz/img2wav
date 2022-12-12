@@ -49,28 +49,31 @@ void normalize(float *src, size_t n) {
  * @brief Convert an image into a Width x Height sized array of greyscale values between [0, 255].
  * 
  * @param path Path to the image to convert
- * @param x Pointer to a variable that stores the width of an image
- * @param y Pointer to a variable that stores the height of an image
+ * @param width Pointer to a variable that stores the width of an image
+ * @param height Pointer to a variable that stores the height of an image
  * @return An array of pixels x by y in size containing values [0, 255]
 */
-int *get_pixels(const char *path, int *x, int *y) {
+int *get_pixels(const char *path, int *width, int *height) {
     int n;
-    unsigned char *data = stbi_load(path, x, y, &n, 3);
+    unsigned char *data = stbi_load(path, width, height, &n, 3);
     check_error(!data, "stbi_load(): Failed to open file", NULL);
     check_error(n != 3, "stbi_load(): Image stride must be 3 (RGB)", NULL);
 
-    int *pixels = malloc(*x * *y * sizeof(*pixels));
+    size_t x = *width;
+    size_t y = *height;
+
+    int *pixels = malloc(x * y * sizeof(*pixels));
     check_error(!pixels, "malloc(): Failed to allocate pixels", NULL);
 
-    for (int i = 0; i < *y; i++) {
+    for (int i = 0; i < y; i++) {
         int col = 0;
-        for (int j = 0; j < *x * n; j += n) {
-            const int r = data[i * (*x * n) + j];
-            const int g = data[i * (*x * n) + j + 1];
-            const int b = data[i * (*x * n) + j + 2];
+        for (int j = 0; j < x * n; j += n) {
+            const int r = data[i * (x * n) + j];
+            const int g = data[i * (x * n) + j + 1];
+            const int b = data[i * (x * n) + j + 2];
 
             // convert the image to gray scale using Luma BT.601
-            pixels[i * *x + col] = (r * 0.299 + g * 0.587 + b * 0.114);
+            pixels[i * x + col] = (r * 0.299 + g * 0.587 + b * 0.114);
             col++;
         }
     }
