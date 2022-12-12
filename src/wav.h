@@ -43,7 +43,6 @@
     for (size_t ch = 0; ch < cfg.nc; ch++)
         free(in[ch]);
     free(in);
-
 */
 #ifndef WAV_H
 #define WAV_H
