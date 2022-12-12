@@ -59,8 +59,8 @@ int *get_pixels(const char *path, int *width, int *height) {
     check_error(!data, "stbi_load(): Failed to open file", NULL);
     check_error(n != 3, "stbi_load(): Image stride must be 3 (RGB)", NULL);
 
-    size_t x = *width;
-    size_t y = *height;
+    const size_t x = *width;
+    const size_t y = *height;
 
     int *pixels = malloc(x * y * sizeof(*pixels));
     check_error(!pixels, "malloc(): Failed to allocate pixels", NULL);
