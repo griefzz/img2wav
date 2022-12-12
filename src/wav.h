@@ -344,7 +344,7 @@ int wav_read(wav_config cfg, const char *path, float **data) {
                     n += fread(&v, 24 / 8 /* 3 bytes */, 1, file);
                     long l1 = 0;
                     memcpy(((unsigned char *) &l1) + 1, &v, 3);
-                    data[ch][i] = (float) l1 / 2147483648.f;
+                    data[ch][i] = (float) l1 * 0x1p-31f;
                 }
             }
             break;
