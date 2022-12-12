@@ -9,6 +9,7 @@
        + Only supports Little-Endian systems
        + Forced usage of standard library
        + Limited support for wav header extensions
+       + Does not support partial reads
 
     DOCUMENTATION
     =============
@@ -313,7 +314,8 @@ int wav_get_header(wav_config *cfg, const char *path) {
  * @return Number of samples read
  */
 int wav_read(wav_config cfg, const char *path, float **data) {
-    int n = 0;
+    uint16_t M = cfg.bd / 8;
+    int n      = 0;
     check_error(cfg.nc == 0, "Number of channels must be greater than 0.", n);
     check_error(cfg.ns == 0, "Number of samples must be greater than 0.", n);
     check_error(cfg.sr == 0, "Sample rate must be greater than 0.", n);
@@ -329,37 +331,49 @@ int wav_read(wav_config cfg, const char *path, float **data) {
     // Move to start of our float data
     check_error(fseek(file, 44, SEEK_SET) != 0, "fseek(): Failed to seek file for reading", n);
 
+    // Memory map the channel data for fast processing
+    uint8_t *map = malloc(sizeof(*map) * cfg.ns * cfg.nc * M);
+    uint8_t *mp  = map;
+    check_error(!map, "Failed to allocate map.", n);
+
+    // Read channel data into memory
+    n = fread(map, sizeof(*map), cfg.ns * cfg.nc * M, file);
+    check_error(n != cfg.ns * cfg.nc * M, "Failed to read into map.", n);
+    n /= M * cfg.nc;
+
     switch (cfg.bd) {
         case 32:
             for (size_t i = 0; i < cfg.ns; i++) {
-                for (size_t ch = 0; ch < cfg.nc; ch++) {
-                    n += read_val(data[ch][i], file);
+                for (size_t ch = 0; ch < cfg.nc; ch++, mp += M) {
+                    memcpy(&data[ch][i], mp, M);
                 }
             }
             break;
         case 24:
             for (size_t i = 0; i < cfg.ns; i++) {
-                for (size_t ch = 0; ch < cfg.nc; ch++) {
-                    int32_t v;
-                    n += fread(&v, 24 / 8 /* 3 bytes */, 1, file);
-                    long l1 = 0;
-                    memcpy(((unsigned char *) &l1) + 1, &v, 3);
+                for (size_t ch = 0; ch < cfg.nc; ch++, mp += M) {
+                    int32_t v = 0;
+                    long l1   = 0;
+                    memcpy(&v, mp, M);
+                    memcpy(((unsigned char *) &l1) + 1, &v, M);
                     data[ch][i] = (float) l1 * 0x1p-31f;
                 }
             }
             break;
         case 16:
             for (size_t i = 0; i < cfg.ns; i++) {
-                for (size_t ch = 0; ch < cfg.nc; ch++) {
-                    int16_t v;
-                    n += fread(&v, sizeof(v), 1, file);
+                for (size_t ch = 0; ch < cfg.nc; ch++, mp += M) {
+                    int16_t v = 0;
+                    memcpy(&v, mp, M);
                     data[ch][i] = v * 0x1p-15f;
                 }
             }
             break;
     }
 
-    return n / cfg.nc;
+    free(map);
+
+    return n;
 }
 
 #undef check_error
