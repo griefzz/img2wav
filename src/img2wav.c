@@ -46,12 +46,12 @@ void normalize(float *src, size_t n) {
 }
 
 /**
-Convert an image into a Width x Height sized array of greyscale values between [0, 255].
-
-@param path Path to the image to convert
-@param x Pointer to a variable that stores the width of an image
-@param y Pointer to a variable that stores the height of an image
-@return An array of pixels x by y in size containing values [0, 255]
+ * @brief Convert an image into a Width x Height sized array of greyscale values between [0, 255].
+ * 
+ * @param path Path to the image to convert
+ * @param x Pointer to a variable that stores the width of an image
+ * @param y Pointer to a variable that stores the height of an image
+ * @return An array of pixels x by y in size containing values [0, 255]
 */
 int *get_pixels(const char *path, int *x, int *y) {
     int n;
@@ -81,15 +81,15 @@ int *get_pixels(const char *path, int *x, int *y) {
 }
 
 /**
-Convert pixel data to frequency data for use in generating audio files
-
-@param pixels Single channel pixel data of values between [0, 255]
-@param sample_rate Desired sample rate of the frequencies
-@param time_s Length in seconds of the transmission time
-@param width Width of the pixel data
-@param height Height of the pixel data
-@param size Pointer to the number of generated amplitudes
-@return Array of amplitudes corresponding to the frequencies generated
+ * @brief Convert pixel data to frequency data for use in generating audio files
+ * 
+ * @param pixels Single channel pixel data of values between [0, 255]
+ * @param sample_rate Desired sample rate of the frequencies
+ * @param time_s Length in seconds of the transmission time
+ * @param width Width of the pixel data
+ * @param height Height of the pixel data
+ * @param size Pointer to the number of generated amplitudes
+ * @return Array of amplitudes corresponding to the frequencies generated
 */
 float *get_freqs(const int *pixels, float sample_rate, float time_s, int width, int height, int *size) {
     const float two_pi   = M_PI * 2.0;
