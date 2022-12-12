@@ -1,4 +1,8 @@
-#define _CRT_SECURE_NO_WARNINGS
+#ifdef _WIN32
+    #ifndef _CRT_SECURE_NO_WARNINGS
+        #define _CRT_SECURE_NO_WARNINGS
+    #endif
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -124,7 +128,7 @@ int main(int argc, char **argv) {
         printf("img2wav - Convert an image to the frequency spectrum of an audio file\n"
                "Usage: img2wav [sample_rate] [time_s] in.jpg out.wav\n");
 
-        return EXIT_SUCCESS;
+        return EXIT_FAILURE;
     }
 
     const float sample_rate = atof(argv[1]);
@@ -144,8 +148,8 @@ int main(int argc, char **argv) {
     /* Wav files expect amplitudes between [-1.0, 1.0] */
     normalize(freqs, n);
 
-    wav_write_config cfg = {1, n, sample_rate, 24};
-    wav_write(cfg, argv[4], freqs);
+    wav_config cfg = {1, n, sample_rate, 24};
+    check_error(wav_write(cfg, argv[4], &freqs) != n * cfg.nc, "wav_write()", EXIT_FAILURE);
 
     free(pixels);
     free(freqs);
