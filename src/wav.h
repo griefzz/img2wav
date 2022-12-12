@@ -220,6 +220,7 @@ int wav_get_header(wav_config *cfg, const char *path) {
 
     FILE *file = fopen(path, "rb");
     check_error(!file, "fopen(): Failed to open file for reading.", n);
+    fprintf(stderr, "File: %s", path);
 
     // RIFF
     n += read_key(title, file);
