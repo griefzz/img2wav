@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <limits.h>
 
 #define WAV_HEADER_SIZE 25
 

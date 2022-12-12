@@ -1,6 +1,6 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <float.h>
+#include <limits.h>
 #include <assert.h>
 
 #include "../src/wav.h"
