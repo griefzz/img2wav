@@ -8,14 +8,8 @@
 
 int compare(float *const *a, float *const *b, size_t nc, size_t ns, size_t bd) {
     float epsilon = FLT_EPSILON;
-    switch (bd) {
-        case 24:
-            epsilon = 0.000001f;
-            break;
-        case 16:
-            epsilon = 0.0001f;
-            break;
-    }
+    if (bd == 24) epsilon = 0.000001f;
+    if (bd == 16) epsilon = 0.0001f;
 
     for (size_t ch = 0; ch < nc; ch++) {
         for (size_t i = 0; i < ns; i++) {
