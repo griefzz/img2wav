@@ -57,6 +57,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <errno.h>
 
 #define WAV_KEY_SIZE    4 //!< Size of the header tags in a wav file
 #define WAV_VALUE_SIZE  1 //!< Number of values to read/write each (read/write)_val call
