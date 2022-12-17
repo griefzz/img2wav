@@ -390,7 +390,7 @@ int wav_read(wav_config cfg, const char *path, float **data) {
     wav_fseek(file, WAV_DATA_OFFSET, SEEK_SET);
 
     // Memory map the channel data for fast processing
-    uint8_t *map = wav_malloc(sizeof(*map) * cfg.ns * cfg.nc * M);
+    uint8_t *map = wav_malloc(sizeof(*map) * (size_t) cfg.ns * (size_t) cfg.nc * (size_t) M);
     uint8_t *mp  = map;
 
     // Read channel data into memory
