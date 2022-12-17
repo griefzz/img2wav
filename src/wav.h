@@ -1,9 +1,9 @@
 /* wav.h - public domain wav file reader and writer by Spencer Stone (2022)
    
    Features:
-       + Supports 32-bit signed 24-bit PCM and signed 16-bit PCM bit depths
+       + Supports 32-bit float, signed 24-bit PCM, signed 16-bit PCM and signed 8-bit PCM bit depths
        + Supports multi-channel formats
-       + Cross platform win32/unix/linux
+       + Cross platform windows/unix/linux
     
     Limitations:
        + Only supports Little-Endian systems
@@ -19,7 +19,7 @@
     cfg.nc = num_channels; // >0
     cfg.ns = num_samples;  // >0
     cfg.sr = sample_rate;  // 44100, 48000, 96000 etc
-    cfg.bd = bit_depth;    // 16, 24, 32
+    cfg.bd = bit_depth;    // 8, 16, 24, 32
 
     // To actually write your audio data, call wav_write() using 
     // your created wav_config. The data parameter to wav write
@@ -32,9 +32,9 @@
 
     // Since wav.h doesn't automatically allocate any memory, you'll
     // need to create an input array for your data of size in[num_channels][num_samples];
-    float **in = malloc(sizeof(*in) * cfg.nc);
+    float **in = wav_malloc(sizeof(*in) * cfg.nc);
     for (size_t ch = 0; ch < cfg.nc; ch++)
-        in[ch] = malloc(sizeof(*in[ch]) * cfg.ns);
+        in[ch] = wav_malloc(sizeof(*in[ch]) * cfg.ns);
 
     // After we understand the structure of the wav file, we can begin reading
     // the channel data using wav_read()
@@ -58,7 +58,10 @@
 #include <inttypes.h>
 #include <limits.h>
 
-#define WAV_HEADER_SIZE 25
+#define WAV_KEY_SIZE    4 //!< Size of the header tags in a wav file
+#define WAV_VALUE_SIZE  1 //!< Number of values to read/write each (read/write)_val call
+#define WAV_HEADER_SIZE 25//!< Size of the wav header section
+#define WAV_DATA_OFFSET 44//!< Offset to the channel data in a wav file
 
 #define check_error(error, description, retval)                                 \
     do {                                                                        \
@@ -68,40 +71,91 @@
         }                                                                       \
     } while (0);
 
-#define write_key(key, file) fwrite((key), sizeof(*(key)), strlen((key)), (file))
-#define write_val(val, file) fwrite(&(val), sizeof((val)), 1, (file))
-#define read_val(val, file)  fread(&(val), sizeof((val)), 1, (file))
-#define read_key(key, file)  fread((key), sizeof(*(key)), 4, (file));
+#define die(msg)                                                                         \
+    do {                                                                                 \
+        fprintf(stderr, "%s: %s [%s:%d]\n", (msg), strerror(errno), __FILE__, __LINE__); \
+        exit(EXIT_FAILURE);                                                              \
+    } while (0);
+
+#define write_key(key, file) fwrite((key), sizeof(*(key)), WAV_KEY_SIZE, (file))  //!< Write a key to the wav file
+#define write_val(val, file) fwrite(&(val), sizeof((val)), WAV_VALUE_SIZE, (file))//!< Write a value to the wav file
+#define read_val(val, file)  fread(&(val), sizeof((val)), WAV_VALUE_SIZE, (file)) //!< Read a key from the wav file
+#define read_key(key, file)  fread((key), sizeof(*(key)), WAV_KEY_SIZE, (file))   //!< Read a value from the wav file
+
+/**
+ * @brief Error checked version of malloc 
+ * 
+ * @param size Number of bytes to allocate
+ * @return Pointer to the beginning of newly allocated memory
+ */
+void *wav_malloc(size_t size) {
+    void *v;
+    if (!(v = malloc(size)))
+        die("malloc()");
+
+    return v;
+}
+
+/**
+ * @brief Error checked version of fopen
+ * 
+ * @param filename File name to associate the file stream to 
+ * @param mode NULL-terminated character string determining file access mode
+ * @return Pointer to the new file stream
+ */
+FILE *wav_fopen(const char *filename, const char *mode) {
+    FILE *f;
+    if (!(f = fopen(filename, mode)))
+        die("fopen()");
+
+    return f;
+}
+
+/**
+ * @brief Error checked version of fseek
+ * 
+ * @param stream  File stream to modify 
+ * @param offset  Number of characters to shift the position relative to origin 
+ * @param origin  Position to which offset is added. It can have one of the following values: SEEK_SET, SEEK_CUR, SEEK_END
+ */
+void wav_fseek(FILE *stream, long offset, int origin) {
+    int ret;
+    if (!(ret = fseek(stream, offset, origin)))
+        die("fseek()");
+}
 
 /** Header for a wav file */
-struct WavHeader {
+struct wav_header {
+    /** RIFF section is the magic tag + entire file size */
     struct RIFF {
-        const char *title;// RIFF
-        uint32_t fileSize;
+        const char *title;//!< RIFF tag
+        uint32_t size;    //!< size of entire wav file in bytes
     } RIFF;
 
+    /** WAVE section is the configuration for the wave file */
     struct WAVE {
-        const char *title; // WAVE
-        const char *marker;// fmt\x20
-        uint32_t cksize;
-        uint16_t WAVE_FORMAT_EXTENSIBLE;// idk what this is
-        uint16_t numChannels;
-        uint32_t sampleRate;
-        uint32_t nAvgBytesPecSec;// (Sample Rate * bitDepth * Channels) / 8
-        uint16_t nBlockAlign;    // (bitDepth/8) * numChannels
-        uint16_t bitsPerSample;
+        const char *title;              //!< WAVE tag
+        const char *marker;             //!< fmt\x20 tag
+        uint32_t cksize;                //!< Idk what this is
+        uint16_t WAVE_FORMAT_EXTENSIBLE;//!< Idk what this is
+        uint16_t num_channels;          //!< Number of channels
+        uint32_t sample_rate;           //!< Sample rate
+        uint32_t avg_bytes_per_sec;     //!< Average bytes per second (Sample Rate * bitDepth * Channels) / 8
+        uint16_t n_block_align;         //!< Stride of the channel data (bitDepth/8) * num_channels
+        uint16_t bits_per_sample;       //!< Bit depth
     } WAVE;
 
+    /** DATA section stores the actual channel data and its size */
     struct DATA {
-        const char *title;// data
-        uint32_t size;
+        const char *title;//!< data tag
+        uint32_t size;    //!< Size in bytes of channel data
     } DATA;
 
     struct RIFF riff;
     struct WAVE wave;
     struct DATA data;
 };
-typedef struct WavHeader WavHeader;
+typedef struct wav_header wav_header;
 
 /**
  * @brief Create a new WavHeader (internal use only)
@@ -110,30 +164,29 @@ typedef struct WavHeader WavHeader;
  * @param ns Number of samples
  * @param sr Sample rate
  * @param bd Bit depth
- * @return WavHeader usable for writing
+ * @return Wav header usable for writing
  */
-WavHeader *wav_header_new(uint16_t nc, uint32_t ns, uint32_t sr, uint16_t bd) {
-    WavHeader *header = malloc(sizeof(*header));
-    check_error(!header, "malloc(): Failed to allocate WavHeader", NULL);
+wav_header *wav_header_new(uint16_t nc, uint32_t ns, uint32_t sr, uint16_t bd) {
+    wav_header *header = wav_malloc(sizeof(*header));
 
     uint16_t M = bd / 8;
 
     // RIFF
-    header->riff.title    = "RIFF";
-    header->riff.fileSize = 28 + 8 + (M * nc * ns);
-    // if our filesize is odd we padd it with one byte
-    if (header->riff.fileSize % 2 != 0) header->riff.fileSize++;
+    header->riff.title = "RIFF";
+    header->riff.size  = 28 + 8 + (M * nc * ns);
+    // if our file size is odd we padd it with one byte
+    if (header->riff.size % 2 != 0) header->riff.size++;
 
     // WAVE
     header->wave.title                  = "WAVE";
     header->wave.marker                 = "fmt\x20";
     header->wave.cksize                 = 16;
     header->wave.WAVE_FORMAT_EXTENSIBLE = (bd == 32) ? 3 : 1;
-    header->wave.numChannels            = nc;
-    header->wave.sampleRate             = sr;
-    header->wave.nAvgBytesPecSec        = (sr * bd * nc) / 8;
-    header->wave.nBlockAlign            = M * nc;
-    header->wave.bitsPerSample          = bd;
+    header->wave.num_channels           = nc;
+    header->wave.sample_rate            = sr;
+    header->wave.avg_bytes_per_sec      = (sr * bd * nc) / 8;
+    header->wave.n_block_align          = M * nc;
+    header->wave.bits_per_sample        = bd;
 
     // DATA
     header->data.title = "data";
@@ -145,9 +198,9 @@ WavHeader *wav_header_new(uint16_t nc, uint32_t ns, uint32_t sr, uint16_t bd) {
 /**
  * @brief Deallocate a WavHeader (internal use only)
  * 
- * @param header WavHeader to free
+ * @param header Wav header to free
  */
-void wav_header_free(WavHeader *header) {
+void wav_header_free(wav_header *header) {
     if (header)
         free(header), header = NULL;
     else
@@ -156,10 +209,10 @@ void wav_header_free(WavHeader *header) {
 
 /** Configuration for wav_writer and wav_reader */
 struct wav_config {
-    uint16_t nc;//!< number of channels
-    uint32_t ns;//!< number of samples
-    uint32_t sr;//!< sample rate
-    uint16_t bd;//!< bit depth
+    uint16_t nc;//!< Number of channels
+    uint32_t ns;//!< Number of samples
+    uint32_t sr;//!< Sample rate
+    uint16_t bd;//!< Bit depth
 };
 typedef struct wav_config wav_config;
 
@@ -174,33 +227,31 @@ typedef struct wav_config wav_config;
 int wav_write(wav_config cfg, const char *path, float *const *data) {
     int n = 0;
 
-    check_error(!data, "Data pointer must not be NULL.", n);
-    check_error(!path, "Path pointer must not be NULL.", n);
+    check_error(!path, "Path pointer must not be NULL!", n);
+    check_error(!data, "Data pointer must not be NULL!", n);
     check_error(cfg.nc == 0, "Number of channels must be greater than 0.", n);
     check_error(cfg.ns == 0, "Number of samples must be greater than 0.", n);
     check_error(cfg.sr == 0, "Sample rate must be greater than 0.", n);
-    check_error(cfg.bd != 32 && cfg.bd != 24 && cfg.bd != 16, "Bit depth must be either 32, 24 or 16.", n);
+    check_error(cfg.bd != 32 && cfg.bd != 24 && cfg.bd != 16 && cfg.bd != 8, "Bit depth must be either 32, 24, 16 or 8.", n);
 
-    FILE *file = fopen(path, "wb");
-    check_error(!file, "fopen(): Failed to open file for writing", n);
+    FILE *file = wav_fopen(path, "wb");
 
-    WavHeader *header = wav_header_new(cfg.nc, cfg.ns, cfg.sr, cfg.bd);
-    check_error(!header, "wav_header_new(): Failed to allocate WavHeader", n);
+    wav_header *header = wav_header_new(cfg.nc, cfg.ns, cfg.sr, cfg.bd);
 
     // RIFF
     n += write_key(header->riff.title, file);
-    n += write_val(header->riff.fileSize, file);
+    n += write_val(header->riff.size, file);
 
     // WAVE
     n += write_key(header->wave.title, file);
     n += write_key(header->wave.marker, file);
     n += write_val(header->wave.cksize, file);
     n += write_val(header->wave.WAVE_FORMAT_EXTENSIBLE, file);
-    n += write_val(header->wave.numChannels, file);
-    n += write_val(header->wave.sampleRate, file);
-    n += write_val(header->wave.nAvgBytesPecSec, file);
-    n += write_val(header->wave.nBlockAlign, file);
-    n += write_val(header->wave.bitsPerSample, file);
+    n += write_val(header->wave.num_channels, file);
+    n += write_val(header->wave.sample_rate, file);
+    n += write_val(header->wave.avg_bytes_per_sec, file);
+    n += write_val(header->wave.n_block_align, file);
+    n += write_val(header->wave.bits_per_sample, file);
 
     // DATA
     n += write_key(header->data.title, file);
@@ -237,6 +288,14 @@ int wav_write(wav_config cfg, const char *path, float *const *data) {
                 }
             }
             break;
+        case 8:
+            for (size_t i = 0; i < cfg.ns; i++) {
+                for (size_t ch = 0; ch < cfg.nc; ch++) {
+                    uint8_t v = (uint8_t) (128 + ((uint8_t) (data[ch][i] * (127.0f))));
+                    n += fwrite(&v, sizeof(uint8_t), 1, file);
+                }
+            }
+            break;
     }
 
     // pad an extra byte if needed
@@ -259,44 +318,43 @@ int wav_write(wav_config cfg, const char *path, float *const *data) {
  * @return int Number of data entries read;
  */
 int wav_get_header(wav_config *cfg, const char *path) {
-    WavHeader header;
-    char title[4];
+    wav_header header;
+    char key[4];
     int n = 0;
 
-    check_error(!cfg, "Wav config must not be NULL", n);
-    check_error(!path, "Path pointer must not be NULL.", n);
+    check_error(!cfg, "Wav config must not be NULL!", n);
+    check_error(!path, "Path pointer must not be NULL!", n);
 
-    FILE *file = fopen(path, "rb");
-    check_error(!file, "fopen(): Failed to open file for reading.", n);
+    FILE *file = wav_fopen(path, "rb");
 
     // RIFF
-    n += read_key(title, file);
-    check_error(strncmp(title, "RIFF", 4) != 0, "Invalid RIFF section.", n);
-    n += read_val(header.riff.fileSize, file);
+    n += read_key(key, file);
+    check_error(strncmp(key, "RIFF", 4) != 0, "Invalid RIFF section.", n);
+    n += read_val(header.riff.size, file);
 
     // WAVE
-    n += read_key(title, file);
-    check_error(strncmp(title, "WAVE", 4) != 0, "Invalid WAVE section.", n);
-    n += read_key(title, file);
-    check_error(strncmp(title, "fmt\x20", 4) != 0, "Invalid WAVE section.", n);
+    n += read_key(key, file);
+    check_error(strncmp(key, "WAVE", 4) != 0, "Invalid WAVE section.", n);
+    n += read_key(key, file);
+    check_error(strncmp(key, "fmt\x20", 4) != 0, "Invalid WAVE section.", n);
     n += read_val(header.wave.cksize, file);
     n += read_val(header.wave.WAVE_FORMAT_EXTENSIBLE, file);
-    n += read_val(header.wave.numChannels, file);
-    n += read_val(header.wave.sampleRate, file);
-    n += read_val(header.wave.nAvgBytesPecSec, file);
-    n += read_val(header.wave.nBlockAlign, file);
-    n += read_val(header.wave.bitsPerSample, file);
+    n += read_val(header.wave.num_channels, file);
+    n += read_val(header.wave.sample_rate, file);
+    n += read_val(header.wave.avg_bytes_per_sec, file);
+    n += read_val(header.wave.n_block_align, file);
+    n += read_val(header.wave.bits_per_sample, file);
 
     // DATA
-    n += read_key(title, file);
-    check_error(strncmp(title, "data", 4) != 0, "Invalid data section.", n);
+    n += read_key(key, file);
+    check_error(strncmp(key, "data", 4) != 0, "Invalid data section.", n);
     n += read_val(header.data.size, file);
 
     check_error(n != WAV_HEADER_SIZE, "Invalid wave header size", n);
 
-    cfg->nc = header.wave.numChannels;
-    cfg->bd = header.wave.bitsPerSample;
-    cfg->sr = header.wave.sampleRate;
+    cfg->nc = header.wave.num_channels;
+    cfg->bd = header.wave.bits_per_sample;
+    cfg->sr = header.wave.sample_rate;
     cfg->ns = header.data.size / (cfg->nc * cfg->bd / 8);// ns = size / (nc * M)
 
     fclose(file);
@@ -319,22 +377,20 @@ int wav_read(wav_config cfg, const char *path, float **data) {
     check_error(cfg.nc == 0, "Number of channels must be greater than 0.", n);
     check_error(cfg.ns == 0, "Number of samples must be greater than 0.", n);
     check_error(cfg.sr == 0, "Sample rate must be greater than 0.", n);
-    check_error(cfg.bd != 32 && cfg.bd != 24 && cfg.bd != 16, "Bit depth must be either 32, 24 or 16.", n);
-    check_error(!path, "Path pointer must not be NULL.", n);
+    check_error(cfg.bd != 32 && cfg.bd != 24 && cfg.bd != 16 && cfg.bd != 8, "Bit depth must be either 32, 24, 16 or 8.", n);
+    check_error(!path, "Path pointer must not be NULL!", n);
     check_error(!data, "Data pointer must not be NULL!", n);
     for (size_t ch = 0; ch < cfg.nc; ch++)
         check_error(!data[ch], "Data channel pointers must not be NULL!", n);
 
-    FILE *file = fopen(path, "rb");
-    check_error(!file, "fopen(): Failed to open file for reading.", n);
+    FILE *file = wav_fopen(path, "rb");
 
     // Move to start of our float data
-    check_error(fseek(file, 44, SEEK_SET) != 0, "fseek(): Failed to seek file for reading", n);
+    wav_fseek(file, WAV_DATA_OFFSET, SEEK_SET);
 
     // Memory map the channel data for fast processing
-    uint8_t *map = malloc(sizeof(*map) * cfg.ns * cfg.nc * M);
+    uint8_t *map = wav_malloc(sizeof(*map) * cfg.ns * cfg.nc * M);
     uint8_t *mp  = map;
-    check_error(!map, "Failed to allocate map.", n);
 
     // Read channel data into memory
     n = fread(map, sizeof(*map), cfg.ns * cfg.nc * M, file);
@@ -369,6 +425,15 @@ int wav_read(wav_config cfg, const char *path, float **data) {
                 }
             }
             break;
+        case 8:
+            for (size_t i = 0; i < cfg.ns; i++) {
+                for (size_t ch = 0; ch < cfg.nc; ch++, mp += M) {
+                    uint8_t v = 0;
+                    memcpy(&v, mp, M);
+                    data[ch][i] = (v - 128) * 0x1p-7f;
+                }
+            }
+            break;
     }
 
     free(map);
@@ -377,8 +442,12 @@ int wav_read(wav_config cfg, const char *path, float **data) {
 }
 
 #undef check_error
+#undef die
 #undef write_key
 #undef write_val
 #undef read_key
 #undef read_val
+#undef WAV_KEY_SIZE
+#undef WAV_VALUE_SIZE
+#undef WAV_DATA_OFFSET
 #endif

@@ -7,6 +7,9 @@ run.sh
 # cmake
 build
 
+# doxygen
+docs/html
+
 # Prerequisites
 *.d
 

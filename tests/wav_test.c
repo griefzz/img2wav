@@ -10,12 +10,14 @@ int compare(float *const *a, float *const *b, size_t nc, size_t ns, size_t bd) {
     float epsilon = FLT_EPSILON;
     if (bd == 24) epsilon = 0.000001f;
     if (bd == 16) epsilon = 0.0001f;
+    if (bd == 8) epsilon = 0.015f;
 
     for (size_t ch = 0; ch < nc; ch++) {
         for (size_t i = 0; i < ns; i++) {
             const float x = a[ch][i];
             const float y = b[ch][i];
             if (!(fabs(x - y) <= epsilon)) {
+                fprintf(stderr, "no match: %f != %f @ [%zu][%zu]\n", x, y, ch, i);
                 return 0;
             }
         }
@@ -55,7 +57,7 @@ int main() {
 
     // Multi-channel test
     wav_config multi_hdr = {nc, ns, sr, bd};
-    assert(wav_write(multi_hdr, "multi.wav", c) == ns);
+    assert(wav_write(multi_hdr, "multi_32.wav", c) == ns);
 
     // 24-bit test
     wav_config multi_24_hdr = {nc, ns, sr, 24};
@@ -64,6 +66,10 @@ int main() {
     // 16-bit test
     wav_config multi_16_hdr = {nc, ns, sr, 16};
     assert(wav_write(multi_16_hdr, "multi_16.wav", c) == ns);
+
+    // 8-bit test
+    wav_config multi_8_hdr = {nc, ns, sr, 8};
+    assert(wav_write(multi_8_hdr, "multi_8.wav", c) == ns);
 
     //// Test invalid headers
     // Invalid number of channels test
@@ -89,7 +95,7 @@ int main() {
     //// Test valid file header reading
     // Test 32-bit multi-channel header reading
     wav_config read_hdr;
-    assert(wav_get_header(&read_hdr, "multi.wav") == WAV_HEADER_SIZE);
+    assert(wav_get_header(&read_hdr, "multi_32.wav") == WAV_HEADER_SIZE);
     assert(read_hdr.nc = nc);
     assert(read_hdr.ns = ns);
     assert(read_hdr.sr = sr);
@@ -109,10 +115,17 @@ int main() {
     assert(read_hdr.sr = sr);
     assert(read_hdr.bd = 16);
 
+    // Test 8-bit multi-channel header reading
+    assert(wav_get_header(&read_hdr, "multi_8.wav") == WAV_HEADER_SIZE);
+    assert(read_hdr.nc = nc);
+    assert(read_hdr.ns = ns);
+    assert(read_hdr.sr = sr);
+    assert(read_hdr.bd = 8);
+
     //// Test valid file data reading
     // Test 32-bit multi-channel header reading
     read_hdr.bd = 32;
-    assert(wav_read(read_hdr, "multi.wav", b) == ns);
+    assert(wav_read(read_hdr, "multi_32.wav", b) == ns);
     assert(compare(c, b, read_hdr.nc, read_hdr.ns, read_hdr.bd));
 
     // Test 24-bit multi-channel header reading
@@ -123,6 +136,11 @@ int main() {
     // Test 16-bit multi-channel header reading
     read_hdr.bd = 16;
     assert(wav_read(read_hdr, "multi_16.wav", b) == ns);
+    assert(compare(c, b, read_hdr.nc, read_hdr.ns, read_hdr.bd));
+
+    // Test 8-bit multi-channel header reading
+    read_hdr.bd = 8;
+    assert(wav_read(read_hdr, "multi_8.wav", b) == ns);
     assert(compare(c, b, read_hdr.nc, read_hdr.ns, read_hdr.bd));
 
     // Cleanup
